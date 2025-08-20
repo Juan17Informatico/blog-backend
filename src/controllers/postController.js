@@ -1,15 +1,47 @@
-import { prisma } from '../db/client.js';
+import * as postService from "../services/postService.js";
 
-export const getAllPosts = async (req, res) => {
-    const posts = await prisma.post.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(posts);
+export const getPosts = async (req, res) => {
+    try {
+        const posts = await postService.getAllPosts();
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
-export const getPostBySlug = async (req, res) => {
-    const { slug } = req.params;
-    const post = await prisma.post.findUnique({ where: { slug } });
+export const getPost = async (req, res) => {
+    try {
+        const post = await postService.getPostById(req.params.id);
+        if (!post) return res.status(404).json({ error: "Post not found" });
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-    if (!post) return res.status(404).json({ error: 'Post no encontrado' });
+export const create = async (req, res) => {
+    try {
+        const newPost = await postService.createPost(req.body);
+        res.status(201).json(newPost);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
 
-    res.json(post);
+export const update = async (req, res) => {
+    try {
+        const updated = await postService.updatePost(req.params.id, req.body);
+        res.json(updated);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const remove = async (req, res) => {
+    try {
+        await postService.deletePost(req.params.id);
+        res.status(204).end();
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 };
