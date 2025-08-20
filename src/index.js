@@ -1,19 +1,18 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import dotenv from 'dotenv';
-import postRoutes from './routes/postRoutes.js';
-
-dotenv.config();
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import postRoutes from "./routes/postRoutes.js";
 
 const app = express();
+const PORT = process.env.PORT || 4000;
+
 app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 app.use(express.json());
 
-app.use('/api/posts', postRoutes);
+// Rutas
+app.use("/api/posts", postRoutes);
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`API corriendo en http://localhost:${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
