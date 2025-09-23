@@ -47,7 +47,7 @@ class AuthService {
         return this.generateToken(user);
     }
 
-    generateToken(user) {
+    async generateToken(user) {
         const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, {
             expiresIn: "24h",
         });
