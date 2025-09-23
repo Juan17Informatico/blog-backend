@@ -1,4 +1,5 @@
-import prisma from "../prisma/client.js";
+import slugify from "slugify";
+import { prisma } from "../db/client.js";
 
 export const getAllPosts = async () => {
     return await prisma.post.findMany({
