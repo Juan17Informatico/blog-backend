@@ -1,12 +1,10 @@
-import authService from "../services/authService.js";
-
-const { register, login, generateToken } = authService;
+import AuthService from "../services/authService.js";
 
 // Handle user registration
 export const registerUser = async (req, res) => {
     try {
         const userData = req.body;
-        const newUser = await register(userData);
+        const newUser = await AuthService.register(userData);
         res.status(201).json({
             success: true,
             message: "User registered successfully",
@@ -24,7 +22,7 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const loginResult = await login(email, password);
+        const loginResult = await AuthService.login(email, password);
 
         res.status(200).json({
             success: true,
@@ -43,7 +41,7 @@ export const loginUser = async (req, res) => {
 export const getNewToken = async (req, res) => {
     try {
         const userId = req.user.id; // Assuming user is attached to request
-        const newToken = await generateToken(userId);
+        const newToken = await AuthService.generateToken(userId);
 
         res.status(200).json({
             success: true,
