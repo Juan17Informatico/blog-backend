@@ -14,14 +14,7 @@ app.use(express.json());
 // Rutas
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", authRoutes);
-
-app.use("/api/users", (req, res) => {
-    res.send("User routes will be here");
-});
-
-app.use("/api/categories", (req, res) => {
-    res.send("Category routes will be here");
-});
+app.use("/api/categories", categoryRoutes);
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
