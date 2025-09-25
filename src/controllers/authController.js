@@ -22,7 +22,7 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const loginResult = await AuthService.login(email, password);
+        const loginResult = await AuthService.login({email, password});
 
         res.status(200).json({
             success: true,
@@ -40,8 +40,8 @@ export const loginUser = async (req, res) => {
 // Handle token generation if needed separately
 export const getNewToken = async (req, res) => {
     try {
-        const userId = req.user.id; // Assuming user is attached to request
-        const newToken = await AuthService.generateToken(userId);
+        const user = req.body;
+        const newToken = await AuthService.generateToken(user);
 
         res.status(200).json({
             success: true,
