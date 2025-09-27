@@ -21,7 +21,7 @@ export const getPost = async (req, res) => {
 
 export const create = async (req, res) => {
     try {
-        const newPost = await postService.createPost(req.body);
+        const newPost = await postService.createPost({...req.body, authorId: req.user.userId});
         res.status(201).json(newPost);
     } catch (error) {
         res.status(400).json({ error: error.message });
