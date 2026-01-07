@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { prisma } from "../db/client.js";
 
 export const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -21,5 +22,21 @@ export const authMiddleware = (req, res, next) => {
     } catch (err) {
         return res.status(401).json({ error: "Unauthorized" });
     }
-
 }
+
+export const requireAdmin = async (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    // Prefer token role, but ensure user still exists
+    if (req.user.role && req.user.role === "admin") return next();
+
+    try {
+        const user = await prisma.user.findUnique({ where: { id: Number(req.user.userId) } });
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+        if (user.role !== "admin") return res.status(403).json({ error: "Forbidden - admin only" });
+        req.user.role = user.role;
+        next();
+    } catch (err) {
+        return res.status(500).json({ error: "Server error" });
+    }
+};
