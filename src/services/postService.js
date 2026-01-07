@@ -1,19 +1,16 @@
 import slugify from "slugify";
 import { prisma } from "../db/client.js";
 
-export const getAllPosts = async (includeUnpublished = false) => {
-    const where = includeUnpublished ? {} : { published: true };
+export const getAllPosts = async () => {
     return await prisma.post.findMany({
-        where,
-        include: { category: true, author: { select: { id: true, name: true, email: true } } },
-        orderBy: { createdAt: "desc" },
+        include: { category: true },
     });
 };
 
 export const getPostById = async (id) => {
     return await prisma.post.findUnique({
         where: { id: Number(id) },
-        include: { category: true, author: { select: { id: true, name: true, email: true } } },
+        include: { category: true },
     });
 };
 
@@ -37,26 +34,15 @@ export const createPost = async ({ title, description, content, categoryId, auth
 };
 
 export const updatePost = async (id, data) => {
-    // prevent slug collision if title changed
-    if (data.title) {
-        data.slug = slugify(data.title, { lower: true, strict: true });
-    }
-
     return await prisma.post.update({
         where: { id: Number(id) },
         data,
-        include: { category: true, author: { select: { id: true, name: true, email: true } } },
+        include: { category: true },
     });
 };
 
-export const deletePost = async (id, hard = false) => {
-    if (hard) {
-        return await prisma.post.delete({ where: { id: Number(id) } });
-    }
-
-    // soft delete / hide
-    return await prisma.post.update({
+export const deletePost = async (id) => {
+    return await prisma.post.delete({
         where: { id: Number(id) },
-        data: { published: false },
     });
 };
