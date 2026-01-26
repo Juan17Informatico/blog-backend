@@ -1,47 +1,108 @@
 import * as categoryService from "../services/categoryService.js";
+import { asyncHandler, AppError } from "../utils/errorHandler.js";
 
-export const getCategories = async (req, res) => {
-    try {
-        const categories = await categoryService.getAllCategories();
-        res.json(categories);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+/**
+ * Obtiene todas las categorías
+ * GET /api/categories
+ */
+export const getCategories = asyncHandler(async (req, res) => {
+    const categories = await categoryService.getAllCategories();
+    
+    if (!categories || categories.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: "No hay categorías disponibles",
+            data: []
+        });
     }
-}
 
-export const getCategory = async (req, res) => {
-    try {
-        const category = await categoryService.getCategoryById(req.params.id);
-        if (!category) return res.status(404).json({ error: "Category not found" });
-        res.json(category);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
+    res.status(200).json({
+        success: true,
+        data: categories
+    });
+});
 
-export const create = async (req, res) => {
-    try {
-        const newCategory = await categoryService.createCategory(req.body);
-        res.status(201).json(newCategory);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+/**
+ * Obtiene una categoría por ID
+ * GET /api/categories/:id
+ */
+export const getCategory = asyncHandler(async (req, res) => {
+    const category = await categoryService.getCategoryById(req.params.id);
+    
+    if (!category) {
+        throw new AppError(
+            'Categoría no encontrada',
+            404,
+            'NotFoundError'
+        );
     }
-}
 
-export const update = async (req, res) => {
-    try {
-        const updated = await categoryService.updateCategory(req.params.id, req.body);
-        res.json(updated);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-}
+    res.status(200).json({
+        success: true,
+        data: category
+    });
+});
 
-export const remove = async (req, res) => {
-    try {
-        await categoryService.deleteCategory(req.params.id);
-        res.status(204).end();
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+/**
+ * Crea una nueva categoría
+ * POST /api/categories
+ */
+export const create = asyncHandler(async (req, res) => {
+    if (!req.body.name) {
+        throw new AppError(
+            'El nombre de la categoría es obligatorio',
+            400,
+            'ValidationError',
+            ['Verifica el campo requerido: name']
+        );
     }
-}
+
+    const newCategory = await categoryService.createCategory(req.body);
+    
+    res.status(201).json({
+        success: true,
+        message: "Categoría creada exitosamente",
+        data: newCategory
+    });
+});
+
+/**
+ * Actualiza una categoría existente
+ * PUT /api/categories/:id
+ */
+export const update = asyncHandler(async (req, res) => {
+    if (!req.body.name) {
+        throw new AppError(
+            'El nombre de la categoría es obligatorio',
+            400,
+            'ValidationError',
+            ['Verifica el campo requerido: name']
+        );
+    }
+
+    const updated = await categoryService.updateCategory(req.params.id, req.body);
+    
+    if (!updated) {
+        throw new AppError(
+            'Categoría no encontrada',
+            404,
+            'NotFoundError'
+        );
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Categoría actualizada exitosamente",
+        data: updated
+    });
+});
+
+/**
+ * Elimina una categoría
+ * DELETE /api/categories/:id
+ */
+export const remove = asyncHandler(async (req, res) => {
+    await categoryService.deleteCategory(req.params.id);
+    
+    res.status(204).end();
+});

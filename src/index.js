@@ -18,6 +18,10 @@ app.use("/api/posts", postRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 
+app.use("/health", (req, res) => {
+    res.status(200).send("OK");
+});
+
 // Error handler middleware
 app.use(errorHandler);
 

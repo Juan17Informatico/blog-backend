@@ -1,89 +1,194 @@
 import * as postService from "../services/postService.js";
 import jwt from "jsonwebtoken";
+import { asyncHandler, AppError } from "../utils/errorHandler.js";
 
-export const getPosts = async (req, res) => {
-    try {
-        const posts = await postService.getAllPosts();
-        res.json(posts);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+/**
+ * Obtiene todos los posts publicados
+ * GET /api/posts
+ */
+export const getPosts = asyncHandler(async (req, res) => {
+    const posts = await postService.getAllPosts();
+    
+    if (!posts || posts.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: "No hay posts disponibles",
+            data: []
+        });
     }
-};
 
-export const getPostsAdmin = async (req, res) => {
-    try {
-        const posts = await postService.getAllPosts(true);
-        res.json(posts);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    res.status(200).json({
+        success: true,
+        data: posts
+    });
+});
+
+/**
+ * Obtiene todos los posts (admin incluye sin publicar)
+ * GET /api/posts/admin
+ */
+export const getPostsAdmin = asyncHandler(async (req, res) => {
+    const posts = await postService.getAllPosts(true);
+    
+    if (!posts || posts.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: "No hay posts disponibles",
+            data: []
+        });
     }
-};
 
-export const getPost = async (req, res) => {
-    try {
-        const post = await postService.getPostById(req.params.id);
-        if (!post) return res.status(404).json({ error: "Post not found" });
+    res.status(200).json({
+        success: true,
+        data: posts
+    });
+});
 
-        // If post is unpublished, allow only the author or admins to view
-        if (!post.published) {
-            const authHeader = req.headers.authorization;
-            if (!authHeader) return res.status(404).json({ error: "Post not found" });
-            try {
-                const token = authHeader.split(" ")[1];
-                const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                if (decoded.role === "admin" || decoded.userId === post.authorId) {
-                    return res.json(post);
-                }
-                return res.status(404).json({ error: "Post not found" });
-            } catch (err) {
-                return res.status(404).json({ error: "Post not found" });
+/**
+ * Obtiene un post por ID
+ * GET /api/posts/:id
+ */
+export const getPost = asyncHandler(async (req, res, next) => {
+    const post = await postService.getPostById(req.params.id);
+    
+    if (!post) {
+        throw new AppError(
+            'Post no encontrado',
+            404,
+            'NotFoundError'
+        );
+    }
+
+    // Si el post no está publicado, solo el autor o admin pueden verlo
+    if (!post.published) {
+        const authHeader = req.headers.authorization;
+        
+        if (!authHeader) {
+            throw new AppError(
+                'Post no encontrado',
+                404,
+                'NotFoundError'
+            );
+        }
+
+        try {
+            const token = authHeader.split(" ")[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            if (decoded.role !== "admin" && decoded.userId !== post.authorId) {
+                throw new AppError(
+                    'Post no encontrado',
+                    404,
+                    'NotFoundError'
+                );
             }
+        } catch (err) {
+            if (err instanceof AppError) throw err;
+            throw new AppError(
+                'Post no encontrado',
+                404,
+                'NotFoundError'
+            );
         }
-
-        res.json(post);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
     }
-};
 
-export const create = async (req, res) => {
-    try {
-        const newPost = await postService.createPost({ ...req.body, authorId: req.user.userId });
-        res.status(201).json(newPost);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+    res.status(200).json({
+        success: true,
+        data: post
+    });
+});
+
+/**
+ * Crea un nuevo post
+ * POST /api/posts
+ */
+export const create = asyncHandler(async (req, res) => {
+    if (!req.user || !req.user.userId) {
+        throw new AppError(
+            'Usuario no autenticado',
+            401,
+            'UnauthorizedError'
+        );
     }
-};
 
-export const update = async (req, res) => {
-    try {
-        const post = await postService.getPostById(req.params.id);
-        if (!post) return res.status(404).json({ error: "Post not found" });
-
-        if (req.user.userId !== post.authorId && req.user.role !== "admin") {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        const updated = await postService.updatePost(req.params.id, req.body);
-        res.json(updated);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+    if (!req.body.title || !req.body.content) {
+        throw new AppError(
+            'Título y contenido son obligatorios',
+            400,
+            'ValidationError',
+            ['Verifica los campos requeridos: title, content']
+        );
     }
-};
 
-export const remove = async (req, res) => {
-    try {
-        const post = await postService.getPostById(req.params.id);
-        if (!post) return res.status(404).json({ error: "Post not found" });
+    const newPost = await postService.createPost({
+        ...req.body,
+        authorId: req.user.userId
+    });
 
-        if (req.user.userId !== post.authorId && req.user.role !== "admin") {
-            return res.status(403).json({ error: "Forbidden" });
-        }
+    res.status(201).json({
+        success: true,
+        message: "Post creado exitosamente",
+        data: newPost
+    });
+});
 
-        const hard = req.query.hard === "true";
-        await postService.deletePost(req.params.id, hard);
-        res.status(204).end();
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+/**
+ * Actualiza un post existente
+ * PUT /api/posts/:id
+ */
+export const update = asyncHandler(async (req, res) => {
+    const post = await postService.getPostById(req.params.id);
+    
+    if (!post) {
+        throw new AppError(
+            'Post no encontrado',
+            404,
+            'NotFoundError'
+        );
     }
-};
+
+    if (req.user.userId !== post.authorId && req.user.role !== "admin") {
+        throw new AppError(
+            'No tienes permiso para actualizar este post',
+            403,
+            'ForbiddenError'
+        );
+    }
+
+    const updated = await postService.updatePost(req.params.id, req.body);
+    
+    res.status(200).json({
+        success: true,
+        message: "Post actualizado exitosamente",
+        data: updated
+    });
+});
+
+/**
+ * Elimina un post
+ * DELETE /api/posts/:id
+ */
+export const remove = asyncHandler(async (req, res) => {
+    const post = await postService.getPostById(req.params.id);
+    
+    if (!post) {
+        throw new AppError(
+            'Post no encontrado',
+            404,
+            'NotFoundError'
+        );
+    }
+
+    if (req.user.userId !== post.authorId && req.user.role !== "admin") {
+        throw new AppError(
+            'No tienes permiso para eliminar este post',
+            403,
+            'ForbiddenError'
+        );
+    }
+
+    const hard = req.query.hard === "true";
+    await postService.deletePost(req.params.id, hard);
+    
+    res.status(204).end();
+});
